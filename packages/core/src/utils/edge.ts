@@ -1,12 +1,16 @@
-import type { Actions, EdgePositions, GraphEdge, GraphNode, HandleElement, Rect, ViewportTransform, XYPosition } from '../types'
+import type { Actions, GraphEdge, GraphNode, HandleElement, ViewportTransform, XYPosition } from '../types'
 import { Position } from '../types'
-import { rectToBox } from '.'
+import { getNodeDimensions, rectToBox } from '.'
 
-export function getHandlePosition(position: Position, rect: Rect, handle: HandleElement | null): XYPosition {
-  const x = (handle?.x ?? 0) + rect.x
-  const y = (handle?.y ?? 0) + rect.y
-  const width = handle?.width ?? rect.width
-  const height = handle?.height ?? rect.height
+export function getHandlePosition(
+  node: GraphNode,
+  handle: HandleElement | null,
+  fallbackPosition: Position = Position.Left,
+): XYPosition {
+  const x = (handle?.x ?? 0) + node.computedPosition.x
+  const y = (handle?.y ?? 0) + node.computedPosition.y
+  const { width, height } = handle ?? getNodeDimensions(node)
+  const position = handle?.position ?? fallbackPosition
 
   switch (position) {
     case Position.Top:
@@ -38,39 +42,6 @@ export function getHandle(bounds: HandleElement[] = [], handleId?: string | null
   }
 
   return (!handleId ? bounds[0] : bounds.find((d) => d.id === handleId)) || null
-}
-
-export function getEdgePositions(
-  sourceNode: GraphNode,
-  sourceHandle: HandleElement | null,
-  sourcePosition: Position,
-  targetNode: GraphNode,
-  targetHandle: HandleElement | null,
-  targetPosition: Position,
-): EdgePositions {
-  const sourceHandlePos = getHandlePosition(
-    sourcePosition,
-    {
-      ...sourceNode.dimensions,
-      ...sourceNode.computedPosition,
-    },
-    sourceHandle,
-  )
-  const targetHandlePos = getHandlePosition(
-    targetPosition,
-    {
-      ...targetNode.dimensions,
-      ...targetNode.computedPosition,
-    },
-    targetHandle,
-  )
-
-  return {
-    sourceX: sourceHandlePos.x,
-    sourceY: sourceHandlePos.y,
-    targetX: targetHandlePos.x,
-    targetY: targetHandlePos.y,
-  }
 }
 
 interface IsEdgeVisibleParams {
