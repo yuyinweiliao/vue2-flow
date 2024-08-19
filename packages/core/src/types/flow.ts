@@ -241,11 +241,6 @@ export interface FlowEmits {
   (event: 'nodesChange', changes: NodeChange[]): void
   (event: 'edgesChange', changes: EdgeChange[]): void
   (event: 'nodesInitialized'): void
-  (event: 'miniMapNodeClick', nodeMouseEvent: NodeMouseEvent): void
-  (event: 'miniMapNodeDoubleClick', nodeMouseEvent: NodeMouseEvent): void
-  (event: 'miniMapNodeMouseEnter', nodeMouseEvent: NodeMouseEvent): void
-  (event: 'miniMapNodeMouseMove', nodeMouseEvent: NodeMouseEvent): void
-  (event: 'miniMapNodeMouseLeave', nodeMouseEvent: NodeMouseEvent): void
   (event: 'connect', connectionEvent: Connection): void
   (
     event: 'connectStart',
