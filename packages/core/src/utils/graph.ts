@@ -8,10 +8,8 @@ import type {
   Dimensions,
   Edge,
   EdgeMarkerType,
-  Element,
   ElementData,
   Elements,
-  FlowElements,
   GraphEdge,
   GraphNode,
   MaybeElement,
@@ -121,7 +119,6 @@ export function parseNode(node: Node, existingNode?: GraphNode, parentNode?: str
       y: 0,
     },
     data: isDef(node.data) ? node.data : {},
-    events: markRaw(isDef(node.events) ? node.events : {}),
   } as GraphNode
 
   return Object.assign(existingNode ?? initialState, node, { id: node.id.toString(), parentNode }) as GraphNode
@@ -139,7 +136,6 @@ export function parseEdge(edge: Edge, existingEdge?: GraphEdge, defaultEdgeOptio
     selectable: edge.selectable ?? defaultEdgeOptions?.selectable,
     focusable: edge.focusable ?? defaultEdgeOptions?.focusable,
     data: isDef(edge.data) ? edge.data : {},
-    events: markRaw(isDef(edge.events) ? edge.events : {}),
     label: edge.label ?? '',
     interactionWidth: edge.interactionWidth ?? defaultEdgeOptions?.interactionWidth,
     ...(defaultEdgeOptions ?? {}),
@@ -148,63 +144,36 @@ export function parseEdge(edge: Edge, existingEdge?: GraphEdge, defaultEdgeOptio
   return Object.assign(existingEdge ?? initialState, edge, { id: edge.id.toString() }) as GraphEdge
 }
 
-function getConnectedElements<T extends Node = Node>(
-  nodeOrId: Node | { id: string } | string,
-  nodes: T[],
-  edges: Edge[],
-  dir: 'source' | 'target',
-): T[] {
-  const id = typeof nodeOrId === 'string' ? nodeOrId : nodeOrId.id
+export function getOutgoers<N extends Node>(nodeOrId: Node | { id: string } | string, nodes: N[], edges: Edge[]): N[] {
+  const nodeId = typeof nodeOrId === 'string' ? nodeOrId : nodeOrId.id
 
-  const connectedIds = new Set()
+  const connectedEdges = edges.filter((edge) => edge.source === nodeId)
+  const outgoers: N[] = []
 
-  const origin = dir === 'source' ? 'target' : 'source'
-
-  for (const edge of edges) {
-    if (edge[origin] === id) {
-      connectedIds.add(edge[dir])
+  for (const edge of connectedEdges) {
+    const node = nodes.find((node) => node.id === edge.target)
+    if (node) {
+      outgoers.push(node)
     }
   }
 
-  return nodes.filter((n) => connectedIds.has(n.id))
+  return outgoers
 }
 
-export function getOutgoers<N extends Node>(nodeOrId: Node | { id: string } | string, nodes: N[], edges: Edge[]): N[]
-export function getOutgoers<T extends Elements>(
-  nodeOrId: Node | { id: string } | string,
-  elements: T,
-): T extends FlowElements ? GraphNode[] : Node[]
-export function getOutgoers(...args: any[]) {
-  if (args.length === 3) {
-    const [nodeOrId, nodes, edges] = args
-    return getConnectedElements(nodeOrId, nodes, edges, 'target')
-  }
-
-  const [nodeOrId, elements] = args
+export function getIncomers<N extends Node>(nodeOrId: Node | { id: string } | string, nodes: N[], edges: Edge[]): N[] {
   const nodeId = typeof nodeOrId === 'string' ? nodeOrId : nodeOrId.id
 
-  const outgoers = elements.filter((el: Element) => isEdge(el) && el.source === nodeId)
+  const connectEdges = edges.filter((edge) => edge.target === nodeId)
+  const incomers: N[] = []
 
-  return outgoers.map((edge: Edge) => elements.find((el: Element) => isNode(el) && el.id === edge.target))
-}
-
-export function getIncomers<N extends Node>(nodeOrId: Node | { id: string } | string, nodes: N[], edges: Edge[]): N[]
-export function getIncomers<T extends Elements>(
-  nodeOrId: Node | { id: string } | string,
-  elements: T,
-): T extends FlowElements ? GraphNode[] : Node[]
-export function getIncomers(...args: any[]) {
-  if (args.length === 3) {
-    const [nodeOrId, nodes, edges] = args
-    return getConnectedElements(nodeOrId, nodes, edges, 'source')
+  for (const edge of connectEdges) {
+    const node = nodes.find((node) => node.id === edge.source)
+    if (node) {
+      incomers.push(node)
+    }
   }
 
-  const [nodeOrId, elements] = args
-  const nodeId = typeof nodeOrId === 'string' ? nodeOrId : nodeOrId.id
-
-  const incomers = elements.filter((el: Element) => isEdge(el) && el.target === nodeId)
-
-  return incomers.map((edge: Edge) => elements.find((el: Element) => isNode(el) && el.id === edge.source))
+  return incomers
 }
 
 export function getEdgeId({ source, sourceHandle, target, targetHandle }: Connection) {
@@ -411,12 +380,12 @@ export function getXYZPos(parentPos: XYZPosition, computedPosition: XYZPosition)
   }
 }
 
-export function isParentSelected(node: GraphNode, findNode: Actions['findNode']): boolean {
+export function isParentSelected(node: GraphNode, getNode: Actions['getNode']): boolean {
   if (!node.parentNode) {
     return false
   }
 
-  const parent = findNode(node.parentNode)
+  const parent = getNode(node.parentNode)
   if (!parent) {
     return false
   }
@@ -425,7 +394,7 @@ export function isParentSelected(node: GraphNode, findNode: Actions['findNode'])
     return true
   }
 
-  return isParentSelected(parent, findNode)
+  return isParentSelected(parent, getNode)
 }
 
 export function getMarkerId(marker: EdgeMarkerType | undefined, vueFlowId?: string) {
